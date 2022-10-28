@@ -1,0 +1,107 @@
+Select *
+ From `CovidData.CovidDeaths`
+ where continent is  not null
+ order by 3,4 
+ 
+Select location,date,total_cases, new_cases, total_deaths, population
+  From `CovidData.CovidDeaths`
+  order by 1,2
+
+
+--  Total cases vs Total deaths
+--  Can estimate the likelihood of dying if any person form specific country contracts with covid
+Select location,date,total_cases, total_deaths, (total_deaths/total_cases )*100 as DeathPercentage
+  From `CovidData.CovidDeaths`
+  where location like 'India'
+  where continent is  not null
+  order by 1,2
+
+  -- Total cases Vs Population
+  -- To show what percentage of our population got covid
+Select location,date,total_cases, population, 
+(total_cases / population)*100 as PercentPopulationInfected
+  From `CovidData.CovidDeaths`
+  where location like 'India'
+  order by 1,2
+
+-- looking for countries with highest infection rate compared to population
+Select location, population,max(total_cases) as HighestInfectionCount,  
+  max((total_cases/population))*100 as PercentPopulationInfected2
+  From `CovidData.CovidDeaths`
+  where continent is  not null
+  group by location,population
+  order by 1,2
+
+-- Showing  highest death count per population by countries
+
+Select location, population,max(total_deaths) as TotalDeathCount,  
+  max((total_deaths/population))*100 as PercentPopulationDeath
+  From `CovidData.CovidDeaths`
+  where continent is  not null
+  group by location,population
+  order by TotalDeathCount desc
+
+
+-- Showing  highest death count  by continents
+
+Select location ,max(total_deaths) as TotalDeathCount,  
+  
+  From `CovidData.CovidDeaths`
+  where continent is  null
+  group by location
+  order by TotalDeathCount desc
+
+  -- Global deaths by dates
+
+Select date, sum(new_cases) as TotalCases, sum(new_deaths) as TotalDeaths,
+  ( sum(new_deaths)/sum(new_cases))*100 as DeathPercentage
+  From `CovidData.CovidDeaths`
+  where continent is  not null
+  group by date
+  order by 3 desc
+
+  Select *
+  From `CovidData.CovidVaccinations`
+  order by 3,4 
+  limit 100
+
+
+  ---- Join Deaths table with Vaccination
+
+  Select *
+  From `CovidData.CovidDeaths` as dea
+  Join `CovidData.CovidVaccinations` as vac
+    on dea.location=vac.location
+    and dea.date=vac.date
+
+----- Total Population vs Vaccination
+
+      Select dea.continent ,dea.location, dea.date ,dea.population,vac.new_vaccinations,
+      sum(vac.new_vaccinations) over (partition by dea.location order by dea.location, dea.date) as RollingSumVaccinations
+  From `CovidData.CovidDeaths` as dea
+  Join `CovidData.CovidVaccinations` as vac
+    on dea.location=vac.location
+    and dea.date=vac.date
+ where dea.continent is not null
+ order by 1,2,3
+
+
+
+
+ 
+---Using CTE 
+
+With PopVSvac 
+as ( 
+    Select dea.continent ,dea.location, dea.date ,dea.population,vac.new_vaccinations,
+      sum(vac.new_vaccinations) over (partition by dea.location order by dea.location, dea.date) as RollingSumVaccinations
+  From `CovidData.CovidDeaths` as dea
+  Join `CovidData.CovidVaccinations` as vac
+    on dea.location=vac.location
+    and dea.date=vac.date
+ where dea.continent is not null
+     )
+Select *, (RollingSumVaccinations/population)*100 as VacinationPercentage
+From PopVSvac
+order by 1,2,3
+
